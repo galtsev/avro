@@ -29,6 +29,18 @@ type Codec interface {
     String() string
 }
 
+func encodeVarInt(w io.Writer, v int) error {
+    var buf [10]byte
+    l := binary.PutUvarint(buf[:], uint64(zencode(v)))
+    _, err := w.Write(buf[:l])
+    return err
+}
+
+func decodeVarInt(r Reader) (int, error) {
+    v, err := binary.ReadUvarint(r)
+    return zdecode(v), err
+}
+
 type LongCodec struct {}
 
 var longCodec LongCodec
@@ -38,15 +50,12 @@ func (LongCodec) Encode(w io.Writer, v interface{}) error {
     if !ok {
         return ValueError{v, "int"}
     }
-    var buf [10]byte
-    l := binary.PutUvarint(buf[:], uint64(zencode(iv)))
-    _, err := w.Write(buf[:l])
-    return err
+    return encodeVarInt(w, iv)
 }
 
 func (LongCodec) Decode(r Reader) (interface{}, error) {
-    v, err := binary.ReadUvarint(r)
-    return zdecode(v), err
+    v, err := decodeVarInt(r)
+    return v, err
 }
 
 func (LongCodec) String() string {
@@ -63,7 +72,7 @@ func (BytesCodec) Encode(w io.Writer, v interface{}) error {
     if buf, ok = v.([]byte); !ok {
         return ValueError{v, "[]byte"}
     }
-    err := longCodec.Encode(w, len(buf))
+    err := encodeVarInt(w, len(buf))
     if err!= nil {
         return err
     }
@@ -72,11 +81,10 @@ func (BytesCodec) Encode(w io.Writer, v interface{}) error {
 }
 
 func (BytesCodec) Decode(r Reader) (interface{}, error) {
-    bufLenV, err := longCodec.Decode(r)
+    bufLen, err := decodeVarInt(r)
     if err!=nil {
         return nil, err
     }
-    bufLen := bufLenV.(int)
     buf := make([]byte, bufLen, bufLen)
     _, err = r.Read(buf)
     if err!=nil {
@@ -186,7 +194,7 @@ func (codec ArrayCodec) Encode(w io.Writer, v interface{}) error {
     if !ok {
         return ValueError{v, "[]interface{}"}
     }
-    err := longCodec.Encode(w, len(arr))
+    err := encodeVarInt(w, len(arr))
     if err!=nil {
         return err
     }
@@ -196,7 +204,7 @@ func (codec ArrayCodec) Encode(w io.Writer, v interface{}) error {
             return err
         }
     }
-    err = longCodec.Encode(w, 0)
+    _, err = w.Write([]byte{0})
     if err!=nil {
         return err
     }
@@ -204,13 +212,9 @@ func (codec ArrayCodec) Encode(w io.Writer, v interface{}) error {
 }
 
 func (codec ArrayCodec) Decode(r Reader) (interface{}, error) {
-    arrLenI, err := longCodec.Decode(r)
+    arrLen, err := decodeVarInt(r)
     if err!=nil {
         return nil, err
-    }
-    arrLen, ok := arrLenI.(int)
-    if !ok {
-        return nil, ValueError{arrLenI, "int"}
     }
     buf := make([]interface{}, arrLen)
     for i := range(buf) {
@@ -221,12 +225,12 @@ func (codec ArrayCodec) Decode(r Reader) (interface{}, error) {
         buf[i] = v
     }
     //TODO: chanked arrays
-    zero, err := longCodec.Decode(r)
+    b, err := r.ReadByte()
     if err!=nil {
         return nil, err
     }
-    if zero.(int)!=0 {
-        return nil, ValueError{zero, "int(0)"}
+    if b!=byte(0) {
+        return nil, ValueError{b, "byte(0)"}
     }
     return buf, nil
 }

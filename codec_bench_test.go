@@ -51,8 +51,9 @@ type AvroSerializer struct {
 }
 
 func (serializer AvroSerializer) Marshal(o interface{}) []byte {
-    var w bytes.Buffer
-    serializer.Encode(&w, o)
+    var a [64]byte
+    w := bytes.NewBuffer(a[:0])
+    serializer.Encode(w, o)
     return w.Bytes()
 }
 
