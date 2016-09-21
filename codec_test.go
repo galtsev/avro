@@ -42,7 +42,7 @@ var (
 func TestLongCodecEncode(t *testing.T) {
     for _, data := range(longData) {
         var w bytes.Buffer
-        assert.Nil(t, longCodec.Encode(&w, data.i))
+        longCodec.Encode(&w, data.i)
         assert.Equal(t, data.b, w.Bytes())
     }
 }
@@ -51,8 +51,7 @@ func TestLongCodecEncode(t *testing.T) {
 func TestLongCodecDecode(t *testing.T) {
     for _, data := range(longData) {
         buf := bytes.NewBuffer(data.b)
-        v, err := longCodec.Decode(buf)
-        assert.Nil(t, err)
+        v := longCodec.Decode(buf)
         assert.Equal(t, data.i, v.(int))
     }
 }
@@ -64,8 +63,7 @@ func zlen(s string) []byte {
 func TestStringCodecEncode(t *testing.T) {
     for _, s := range(stringArgs) {
         var w bytes.Buffer
-        err := stringCodec.Encode(&w, s)
-        assert.Nil(t, err)
+        stringCodec.Encode(&w, s)
         expected := append(zlen(s), []byte(s)...)
         assert.Equal(t, expected, w.Bytes())
     }
@@ -75,8 +73,7 @@ func TestStringCodecDecode(t *testing.T) {
     for _, s := range(stringArgs) {
         encoded := append(zlen(s), []byte(s)...)
         r := bytes.NewBuffer(encoded)
-        v, err := stringCodec.Decode(r)
-        assert.Nil(t, err)
+        v := stringCodec.Decode(r)
         assert.Equal(t, s, v.(string))
     }
 }
@@ -85,8 +82,7 @@ func TestArrayEncode(t *testing.T) {
     codec := ArrayCodec{ItemCodec: longCodec}
     for _, data := range(arrayData) {
         var w bytes.Buffer
-        err := codec.Encode(&w, data.a)
-        assert.Nil(t, err)
+        codec.Encode(&w, data.a)
         assert.Equal(t, data.b, w.Bytes())
     }
 }
@@ -95,8 +91,7 @@ func TestArrayDecode(t *testing.T) {
     codec := ArrayCodec{ItemCodec: longCodec}
     for _, data := range(arrayData) {
         r := bytes.NewBuffer(data.b)
-        v, err := codec.Decode(r)
-        assert.Nil(t, err)
+        v := codec.Decode(r)
         assert.Equal(t, data.a, v)
     }
 }
@@ -113,8 +108,7 @@ var boolData = []struct{
 func TestBooleanEncode(t *testing.T) {
     for _, data := range(boolData) {
         var w bytes.Buffer
-        err := booleanCodec.Encode(&w, data.v)
-        assert.Nil(t, err)
+        booleanCodec.Encode(&w, data.v)
         assert.Equal(t, data.b, w.Bytes())
     }
 }
@@ -122,8 +116,7 @@ func TestBooleanEncode(t *testing.T) {
 func TestBooleanDecode(t *testing.T) {
     for _, data := range(boolData) {
         r := bytes.NewBuffer(data.b)
-        v, err := booleanCodec.Decode(r)
-        assert.Nil(t, err)
+        v := booleanCodec.Decode(r)
         assert.Equal(t, data.v, v.(bool))
     }
 }
@@ -161,8 +154,7 @@ func TestRecordEncode(t *testing.T) {
     for _, data := range(recordData) {
         var w bytes.Buffer
         codec := RecordCodec{FieldCodecs: data.c}
-        err:= codec.Encode(&w, data.v)
-        assert.Nil(t, err)
+        codec.Encode(&w, data.v)
         assert.Equal(t, data.b, w.Bytes())
     }
 }
@@ -171,8 +163,7 @@ func TestRecordDecode(t *testing.T) {
     for _, data := range(recordData) {
         r := bytes.NewBuffer(data.b)
         codec := RecordCodec{FieldCodecs: data.c}
-        v, err := codec.Decode(r)
-        assert.Nil(t, err)
+        v := codec.Decode(r)
         assert.Equal(t, data.v, v.([]interface{}))
     }
 }
@@ -180,11 +171,9 @@ func TestRecordDecode(t *testing.T) {
 func TestDoubleEncodeDecode(t *testing.T) {
     for _, f := range([]float64{0, 1.1, 1.0/3.0, 123e4}) {
         var w bytes.Buffer
-        err := doubleCodec.Encode(&w, f)
-        assert.Nil(t, err)
+        doubleCodec.Encode(&w, f)
         r := bytes.NewBuffer(w.Bytes())
-        v, err := doubleCodec.Decode(r)
-        assert.Nil(t, err)
+        v := doubleCodec.Decode(r)
         assert.Equal(t, f, v.(float64))
     }
 }

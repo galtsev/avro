@@ -59,8 +59,8 @@ func (serializer AvroSerializer) Marshal(o interface{}) []byte {
 
 func (serializer AvroSerializer) Unmarshal(d []byte, o interface{}) error {
     r := bytes.NewBuffer(d)
-    _, err := serializer.Decode(r)
-    return err
+    serializer.Decode(r)
+    return nil
 }
 
 func benchMarshal(b *testing.B, s Serializer) {

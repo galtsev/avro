@@ -24,38 +24,34 @@ type Reader interface {
 }
 
 type Codec interface {
-    Encode(w io.Writer, v interface{}) error
-    Decode(r Reader) (interface{}, error)
+    Encode(w io.Writer, v interface{})
+    Decode(r Reader) interface{}
     String() string
 }
 
-func encodeVarInt(w io.Writer, v int) error {
+func encodeVarInt(w io.Writer, v int) {
     var buf [10]byte
     l := binary.PutUvarint(buf[:], uint64(zencode(v)))
     _, err := w.Write(buf[:l])
-    return err
+    check(err)
 }
 
-func decodeVarInt(r Reader) (int, error) {
+func decodeVarInt(r Reader) int {
     v, err := binary.ReadUvarint(r)
-    return zdecode(v), err
+    check(err)
+    return zdecode(v)
 }
 
 type LongCodec struct {}
 
 var longCodec LongCodec
 
-func (LongCodec) Encode(w io.Writer, v interface{}) error {
-    iv, ok := v.(int)
-    if !ok {
-        return ValueError{v, "int"}
-    }
-    return encodeVarInt(w, iv)
+func (LongCodec) Encode(w io.Writer, v interface{}) {
+    encodeVarInt(w, v.(int))
 }
 
-func (LongCodec) Decode(r Reader) (interface{}, error) {
-    v, err := decodeVarInt(r)
-    return v, err
+func (LongCodec) Decode(r Reader) interface{} {
+    return decodeVarInt(r)
 }
 
 func (LongCodec) String() string {
@@ -64,33 +60,28 @@ func (LongCodec) String() string {
 
 type BytesCodec struct {}
 
-var bytesCodec BytesCodec
-
-func (BytesCodec) Encode(w io.Writer, v interface{}) error {
-    var buf []byte
-    var ok bool
-    if buf, ok = v.([]byte); !ok {
-        return ValueError{v, "[]byte"}
-    }
-    err := encodeVarInt(w, len(buf))
-    if err!= nil {
-        return err
-    }
-    _, err = w.Write(buf)
-    return err
+func encodeBytes(w io.Writer, buf []byte) {
+    encodeVarInt(w, len(buf))
+    _, err := w.Write(buf)
+    check(err)
 }
 
-func (BytesCodec) Decode(r Reader) (interface{}, error) {
-    bufLen, err := decodeVarInt(r)
-    if err!=nil {
-        return nil, err
-    }
+func decodeBytes(r Reader) []byte {
+    bufLen := decodeVarInt(r)
     buf := make([]byte, bufLen, bufLen)
-    _, err = r.Read(buf)
-    if err!=nil {
-        return nil, err
-    }
-    return buf, nil
+    _, err := r.Read(buf)
+    check(err)
+    return buf
+}
+
+var bytesCodec BytesCodec
+
+func (BytesCodec) Encode(w io.Writer, v interface{}) {
+    encodeBytes(w, v.([]byte))
+}
+
+func (BytesCodec) Decode(r Reader) interface{} {
+    return decodeBytes(r)
 }
 
 func (BytesCodec) String() string {
@@ -101,20 +92,12 @@ type StringCodec struct{}
 
 var stringCodec StringCodec
 
-func (StringCodec) Encode(w io.Writer, v interface{}) error {
-    s, ok := v.(string)
-    if !ok {
-        return ValueError{v, "string"}
-    }
-    return bytesCodec.Encode(w, []byte(s))
+func (StringCodec) Encode(w io.Writer, v interface{}) {
+    encodeBytes(w, []byte(v.(string)))
 }
 
-func (StringCodec) Decode(r Reader) (interface{}, error) {
-    buf, err := bytesCodec.Decode(r)
-    if err!=nil {
-        return "", err
-    }
-    return string(buf.([]byte)), nil
+func (StringCodec) Decode(r Reader) interface{} {
+    return string(decodeBytes(r))
 }
 
 func (StringCodec) String() string {
@@ -129,26 +112,21 @@ func (BooleanCodec) String() string {
     return "BooleanCodec"
 }
 
-func (BooleanCodec) Encode(w io.Writer, v interface{}) error {
-    b, ok := v.(bool)
-    if !ok {
-        return ValueError{v, "bool"}
-    }
+func (BooleanCodec) Encode(w io.Writer, v interface{}) {
+    b := v.(bool)
     var buf [1]byte
     if b {
         buf[0] = 1
     }
     _, err := w.Write(buf[:])
-    return err
+    check(err)
 }
 
-func (BooleanCodec) Decode(r Reader) (interface{}, error) {
+func (BooleanCodec) Decode(r Reader) interface{} {
     var buf [1]byte
     _, err := r.Read(buf[:])
-    if err!=nil {
-        return nil, err
-    }
-    return buf[0]==1, nil
+    check(err)
+    return buf[0]==1
 }
 
 type DoubleCodec struct{}
@@ -159,26 +137,19 @@ func (DoubleCodec) String() string {
     return "DoubleCodec"
 }
 
-func (DoubleCodec) Encode(w io.Writer, v interface{}) error {
+func (DoubleCodec) Encode(w io.Writer, v interface{}) {
     var buf [8]byte
-    f, ok := v.(float64)
-    if !ok {
-        return ValueError{v, "float64"}
-    }
-    binary.LittleEndian.PutUint64(buf[:], math.Float64bits(f))
+    binary.LittleEndian.PutUint64(buf[:], math.Float64bits(v.(float64)))
     _, err := w.Write(buf[:])
-    return err
+    check(err)
 }
 
-func (DoubleCodec) Decode(r Reader) (interface{}, error) {
+func (DoubleCodec) Decode(r Reader) interface{} {
     var buf [8]byte
     _, err := r.Read(buf[:])
-    if err!=nil {
-        return nil, err
-    }
+    check(err)
     bits := binary.LittleEndian.Uint64(buf[:])
-    f := math.Float64frombits(bits)
-    return f, nil
+    return math.Float64frombits(bits)
 }
 
 type ArrayCodec struct {
@@ -189,50 +160,29 @@ func (codec ArrayCodec) String() string {
     return fmt.Sprintf("ArrayCodec<%s>", codec.ItemCodec)
 }
 
-func (codec ArrayCodec) Encode(w io.Writer, v interface{}) error {
-    arr, ok := v.([]interface{})
-    if !ok {
-        return ValueError{v, "[]interface{}"}
-    }
-    err := encodeVarInt(w, len(arr))
-    if err!=nil {
-        return err
-    }
+func (codec ArrayCodec) Encode(w io.Writer, v interface{}) {
+    arr := v.([]interface{})
+    encodeVarInt(w, len(arr))
     for _, item := range(arr) {
-        err:=codec.ItemCodec.Encode(w, item)
-        if err!=nil {
-            return err
-        }
+        codec.ItemCodec.Encode(w, item)
     }
-    _, err = w.Write([]byte{0})
-    if err!=nil {
-        return err
-    }
-    return nil
+    _, err := w.Write([]byte{0})
+    check(err)
 }
 
-func (codec ArrayCodec) Decode(r Reader) (interface{}, error) {
-    arrLen, err := decodeVarInt(r)
-    if err!=nil {
-        return nil, err
-    }
+func (codec ArrayCodec) Decode(r Reader) interface{} {
+    arrLen := decodeVarInt(r)
     buf := make([]interface{}, arrLen)
     for i := range(buf) {
-        v, err:= codec.ItemCodec.Decode(r)
-        if err!=nil {
-            return nil, err
-        }
-        buf[i] = v
+        buf[i] = codec.ItemCodec.Decode(r)
     }
     //TODO: chanked arrays
     b, err := r.ReadByte()
-    if err!=nil {
-        return nil, err
-    }
+    check(err)
     if b!=byte(0) {
-        return nil, ValueError{b, "byte(0)"}
+        panic(ValueError{b, "byte(0)"})
     }
-    return buf, nil
+    return buf
 }
 
 type RecordCodec struct {
@@ -247,31 +197,20 @@ func (codec RecordCodec) String() string {
     return fmt.Sprintf("RecordCodec<%s>", strings.Join(codecNames, ","))
 }
 
-func (codec RecordCodec) Encode(w io.Writer, v interface{}) error {
-    items, ok := v.([]interface{})
-    if !ok {
-        return ValueError{v, "[]interface{}"}
-    }
+func (codec RecordCodec) Encode(w io.Writer, v interface{}) {
+    items := v.([]interface{})
     if len(items)!=len(codec.FieldCodecs) {
-        return errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(items), len(codec.FieldCodecs)))
+        panic(errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(items), len(codec.FieldCodecs))))
     }
     for i, item := range(items) {
-        err := codec.FieldCodecs[i].Encode(w, item)
-        if err!=nil {
-            return err
-        }
+        codec.FieldCodecs[i].Encode(w, item)
     }
-    return nil
 }
 
-func (codec RecordCodec) Decode(r Reader) (interface{}, error) {
+func (codec RecordCodec) Decode(r Reader) interface{} {
     res := make([]interface{}, len(codec.FieldCodecs))
     for i, c := range(codec.FieldCodecs) {
-        v, err := c.Decode(r)
-        if err!=nil {
-            return nil, err
-        }
-        res[i] = v
+        res[i] = c.Decode(r)
     }
-    return res, nil
+    return res
 }
