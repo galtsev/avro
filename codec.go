@@ -185,32 +185,58 @@ func (codec ArrayCodec) Decode(r Reader) interface{} {
     return buf
 }
 
+type RecordField struct {
+    Name string
+    FieldCodec Codec
+}
+
 type RecordCodec struct {
-    FieldCodecs []Codec
+    Name string
+    Fields []RecordField
 }
 
 func (codec RecordCodec) String() string {
-    var codecNames []string
-    for _, c := range(codec.FieldCodecs) {
-        codecNames = append(codecNames, c.String())
+    var fields []string
+    for _, f := range(codec.Fields) {
+        fields = append(fields, fmt.Sprintf("%s: %s", f.Name, f.FieldCodec.String()))
     }
-    return fmt.Sprintf("RecordCodec<%s>", strings.Join(codecNames, ","))
+    return fmt.Sprintf("%s<%s>", codec.Name, strings.Join(fields, ","))
 }
 
 func (codec RecordCodec) Encode(w io.Writer, v interface{}) {
     items := v.([]interface{})
-    if len(items)!=len(codec.FieldCodecs) {
-        panic(errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(items), len(codec.FieldCodecs))))
+    if len(items)!=len(codec.Fields) {
+        panic(errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(items), len(codec.Fields))))
     }
     for i, item := range(items) {
-        codec.FieldCodecs[i].Encode(w, item)
+        codec.Fields[i].FieldCodec.Encode(w, item)
     }
 }
 
 func (codec RecordCodec) Decode(r Reader) interface{} {
-    res := make([]interface{}, len(codec.FieldCodecs))
-    for i, c := range(codec.FieldCodecs) {
-        res[i] = c.Decode(r)
+    res := make([]interface{}, len(codec.Fields))
+    for i, c := range(codec.Fields) {
+        res[i] = c.FieldCodec.Decode(r)
     }
     return res
+}
+
+type UnionCodec struct {
+    Options []Codec
+}
+
+func (UnionCodec) String() string {
+    return "UnionCodec"
+}
+
+func (codec UnionCodec) Encode(w io.Writer, v interface{}) {
+    _, err := w.Write([]byte{1})
+    check(err)
+}
+
+func (codec UnionCodec) Decode(r Reader) interface{} {
+    var buf [1]byte
+    _, err := r.Read(buf[:])
+    check(err)
+    return buf[0]
 }

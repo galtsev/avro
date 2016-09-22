@@ -122,29 +122,41 @@ func TestBooleanDecode(t *testing.T) {
 }
 
 var recordData = []struct{
-    c []Codec
+    c []RecordField
     v []interface{}
     b []byte
 } {
     {
-        c: []Codec{longCodec, longCodec},
+        c: []RecordField{RecordField{"a", longCodec}, RecordField{"b", longCodec}},
         v: []interface{}{1, -5},
         b: []byte{2, 9},
     },
     {
-        c: []Codec{stringCodec, longCodec},
+        c: []RecordField{RecordField{"a", stringCodec}, RecordField{"b", longCodec}},
         v: []interface{}{"one", 7},
         b: []byte{6,'o','n','e',14},
     },
     // array in record
     {
-        c: []Codec{longCodec, ArrayCodec{booleanCodec}},
+        c: []RecordField{RecordField{"id", longCodec}, RecordField{"flags", ArrayCodec{booleanCodec}}},
         v: []interface{}{3, []interface{}{true,false,true}},
         b: []byte{6,6,1,0,1,0},
     },
     //record in record
     {
-        c: []Codec{stringCodec, RecordCodec{FieldCodecs: []Codec{booleanCodec,longCodec}} },
+        c: []RecordField{
+                RecordField{"name", stringCodec}, 
+                RecordField{
+                    "rec", 
+                    RecordCodec{
+                    Name:"sub", 
+                    Fields: []RecordField{
+                        RecordField{"b", booleanCodec},
+                        RecordField{"l", longCodec},
+                    },
+                },
+            },
+        },
         v: []interface{}{"two", []interface{}{false, 11}},
         b: []byte{6,'t','w','o',0,22},
     },
@@ -153,7 +165,7 @@ var recordData = []struct{
 func TestRecordEncode(t *testing.T) {
     for _, data := range(recordData) {
         var w bytes.Buffer
-        codec := RecordCodec{FieldCodecs: data.c}
+        codec := RecordCodec{Name: "rec", Fields: data.c}
         codec.Encode(&w, data.v)
         assert.Equal(t, data.b, w.Bytes())
     }
@@ -162,7 +174,7 @@ func TestRecordEncode(t *testing.T) {
 func TestRecordDecode(t *testing.T) {
     for _, data := range(recordData) {
         r := bytes.NewBuffer(data.b)
-        codec := RecordCodec{FieldCodecs: data.c}
+        codec := RecordCodec{Name: "rec", Fields: data.c}
         v := codec.Decode(r)
         assert.Equal(t, data.v, v.([]interface{}))
     }

@@ -98,12 +98,13 @@ func benchUnmarshal(b *testing.B, s Serializer) {
 
 var avroSerializer = AvroSerializer{
     RecordCodec{
-        FieldCodecs: []Codec{
-            stringCodec,
-            stringCodec,
-            longCodec,
-            booleanCodec,
-            doubleCodec,
+        Name: "rec",
+        Fields: []RecordField{
+            RecordField{"name", stringCodec},
+            RecordField{"phone", stringCodec},
+            RecordField{"siblings", longCodec},
+            RecordField{"spouse", booleanCodec},
+            RecordField{"money", doubleCodec},
         },
     },
 }
