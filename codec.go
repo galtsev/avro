@@ -9,37 +9,24 @@ import (
 	"strings"
 )
 
-type ValueError struct {
-	Value        interface{}
-	ExpectedType string
+type IntSchema struct{}
+
+var intSchema IntSchema
+
+func (IntSchema) Encode(w io.Writer, v interface{}) {
+	encodeVarInt(w, int(v.(int32)))
 }
 
-func (err ValueError) Error() string {
-	return fmt.Sprintf("ValueError. Expect %s, found %v of type %T", err.ExpectedType, err.Value, err.Value)
+func (IntSchema) Decode(r Reader) interface{} {
+	return int32(decodeVarInt(r))
 }
 
-type Reader interface {
-	io.Reader
-	io.ByteReader
+func (IntSchema) String() string {
+	return "IntSchema"
 }
 
-type Schema interface {
-	Encode(w io.Writer, v interface{})
-	Decode(r Reader) interface{}
-	String() string
-}
-
-func encodeVarInt(w io.Writer, v int) {
-	var buf [10]byte
-	l := binary.PutUvarint(buf[:], uint64(zencode(v)))
-	_, err := w.Write(buf[:l])
-	check(err)
-}
-
-func decodeVarInt(r Reader) int {
-	v, err := binary.ReadUvarint(r)
-	check(err)
-	return zdecode(v)
+func (IntSchema) SchemaName() string {
+	return "int"
 }
 
 type LongSchema struct{}
@@ -56,6 +43,10 @@ func (LongSchema) Decode(r Reader) interface{} {
 
 func (LongSchema) String() string {
 	return "LongCodec"
+}
+
+func (LongSchema) SchemaName() string {
+	return "long"
 }
 
 type BytesSchema struct{}
@@ -88,6 +79,10 @@ func (BytesSchema) String() string {
 	return "BytesCodec"
 }
 
+func (BytesSchema) SchemaName() string {
+	return "bytes"
+}
+
 type StringSchema struct{}
 
 var stringSchema StringSchema
@@ -102,6 +97,10 @@ func (StringSchema) Decode(r Reader) interface{} {
 
 func (StringSchema) String() string {
 	return "StringCodec"
+}
+
+func (StringSchema) SchemaName() string {
+	return "string"
 }
 
 type BooleanSchema struct{}
@@ -129,6 +128,10 @@ func (BooleanSchema) Decode(r Reader) interface{} {
 	return buf[0] == 1
 }
 
+func (BooleanSchema) SchemaName() string {
+	return "boolean"
+}
+
 type DoubleSchema struct{}
 
 var doubleSchema DoubleSchema
@@ -150,6 +153,10 @@ func (DoubleSchema) Decode(r Reader) interface{} {
 	check(err)
 	bits := binary.LittleEndian.Uint64(buf[:])
 	return math.Float64frombits(bits)
+}
+
+func (DoubleSchema) SchemaName() string {
+	return "double"
 }
 
 type ArraySchema struct {
@@ -185,9 +192,8 @@ func (codec ArraySchema) Decode(r Reader) interface{} {
 	return buf
 }
 
-type RecordField struct {
-	Name        string
-	FieldSchema Schema
+func (schema ArraySchema) SchemaName() string {
+	return "[]" + schema.ItemSchema.SchemaName()
 }
 
 type RecordSchema struct {
@@ -221,6 +227,10 @@ func (codec RecordSchema) Decode(r Reader) interface{} {
 	return res
 }
 
+func (schema RecordSchema) SchemaName() string {
+	return schema.Name
+}
+
 type UnionSchema struct {
 	Options []Schema
 }
@@ -229,9 +239,20 @@ func (UnionSchema) String() string {
 	return "UnionCodec"
 }
 
+func (schema UnionSchema) getOptionForValue(v interface{}) (index int, option Schema) {
+	valueSchema := SchemaName(v)
+	for index, option = range schema.Options {
+		if option.SchemaName() == valueSchema {
+			return
+		}
+	}
+	return
+}
+
 func (codec UnionSchema) Encode(w io.Writer, v interface{}) {
-	_, err := w.Write([]byte{1})
-	check(err)
+	index, option := codec.getOptionForValue(v)
+	encodeVarInt(w, index)
+	option.Encode(w, v)
 }
 
 func (codec UnionSchema) Decode(r Reader) interface{} {
@@ -239,4 +260,9 @@ func (codec UnionSchema) Decode(r Reader) interface{} {
 	_, err := r.Read(buf[:])
 	check(err)
 	return codec.Options[buf[0]].Decode(r)
+}
+
+// inline union have no explicit schema name
+func (schema UnionSchema) SchemaName() string {
+	return "union"
 }

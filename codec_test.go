@@ -3,6 +3,7 @@ package avro
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
+	"strconv"
 	"testing"
 )
 
@@ -91,6 +92,28 @@ func TestArrayDecode(t *testing.T) {
 		r := bytes.NewBuffer(data.b)
 		v := codec.Decode(r)
 		assert.Equal(t, data.a, v)
+	}
+}
+
+var intData = []struct {
+	v int32
+	b []byte
+}{
+	{0, []byte{0}},
+	{1, []byte{2}},
+	{2, []byte{4}},
+	{-1, []byte{1}},
+	{-2, []byte{3}},
+	{-64, []byte{0x7F}},
+	{62, []byte{124}},
+	{64, []byte{0x80, 0x01}},
+}
+
+func TestIntEncode(t *testing.T) {
+	for _, data := range intData {
+		var w bytes.Buffer
+		intSchema.Encode(&w, data.v)
+		assert.Equal(t, data.b, w.Bytes(), strconv.Itoa(int(data.v)))
 	}
 }
 
