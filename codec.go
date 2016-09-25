@@ -9,6 +9,26 @@ import (
 	"strings"
 )
 
+type NullSchema struct{}
+
+var nullSchema NullSchema
+
+func (NullSchema) Encode(w io.Writer, v interface{}) {
+	return
+}
+
+func (NullSchema) Decode(r Reader) interface{} {
+	return nil
+}
+
+func (NullSchema) String() string {
+	return "NullSchema"
+}
+
+func (NullSchema) SchemaName() string {
+	return "null"
+}
+
 type IntSchema struct{}
 
 var intSchema IntSchema
@@ -201,30 +221,30 @@ type RecordSchema struct {
 	Fields []RecordField
 }
 
+func (codec RecordSchema) Encode(w io.Writer, v interface{}) {
+	rec := v.(Record)
+	if len(rec.Values) != len(codec.Fields) {
+		panic(errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(rec.Values), len(codec.Fields))))
+	}
+	for i, item := range rec.Values {
+		codec.Fields[i].FieldSchema.Encode(w, item)
+	}
+}
+
+func (codec RecordSchema) Decode(r Reader) interface{} {
+	rec := Record{RecordSchema: codec, Values: make([]interface{}, len(codec.Fields))}
+	for i, c := range codec.Fields {
+		rec.Values[i] = c.FieldSchema.Decode(r)
+	}
+	return rec
+}
+
 func (codec RecordSchema) String() string {
 	var fields []string
 	for _, f := range codec.Fields {
 		fields = append(fields, fmt.Sprintf("%s: %s", f.Name, f.FieldSchema.String()))
 	}
 	return fmt.Sprintf("%s<%s>", codec.Name, strings.Join(fields, ","))
-}
-
-func (codec RecordSchema) Encode(w io.Writer, v interface{}) {
-	items := v.([]interface{})
-	if len(items) != len(codec.Fields) {
-		panic(errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(items), len(codec.Fields))))
-	}
-	for i, item := range items {
-		codec.Fields[i].FieldSchema.Encode(w, item)
-	}
-}
-
-func (codec RecordSchema) Decode(r Reader) interface{} {
-	res := make([]interface{}, len(codec.Fields))
-	for i, c := range codec.Fields {
-		res[i] = c.FieldSchema.Decode(r)
-	}
-	return res
 }
 
 func (schema RecordSchema) SchemaName() string {

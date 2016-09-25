@@ -6,6 +6,10 @@ import (
 
 func baseCodec(name string) Schema {
 	switch name {
+	case "boolean":
+		return booleanSchema
+	case "int":
+		return intSchema
 	case "long":
 		return longSchema
 	case "bytes":

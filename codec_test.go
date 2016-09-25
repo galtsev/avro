@@ -141,29 +141,41 @@ func TestBooleanDecode(t *testing.T) {
 	}
 }
 
+var subrecordSchema = RecordSchema{
+	Name: "sub",
+	Fields: []RecordField{
+		{Name: "b", FieldSchema: booleanSchema},
+		{Name: "l", FieldSchema: longSchema},
+	},
+}
 var recordData = []struct {
+	n string
 	c []RecordField
 	v []interface{}
 	b []byte
 }{
 	{
+		n: "long,long",
 		c: []RecordField{RecordField{"a", longSchema}, RecordField{"b", longSchema}},
 		v: []interface{}{1, -5},
 		b: []byte{2, 9},
 	},
 	{
+		n: "string,long",
 		c: []RecordField{RecordField{"a", stringSchema}, RecordField{"b", longSchema}},
 		v: []interface{}{"one", 7},
 		b: []byte{6, 'o', 'n', 'e', 14},
 	},
 	// array in record
 	{
+		n: "long,[]bool",
 		c: []RecordField{RecordField{"id", longSchema}, RecordField{"flags", ArraySchema{booleanSchema}}},
 		v: []interface{}{3, []interface{}{true, false, true}},
 		b: []byte{6, 6, 1, 0, 1, 0},
 	},
 	//record in record
 	{
+		n: "name,rec<bool,long>",
 		c: []RecordField{
 			RecordField{"name", stringSchema},
 			RecordField{
@@ -177,7 +189,7 @@ var recordData = []struct {
 				},
 			},
 		},
-		v: []interface{}{"two", []interface{}{false, 11}},
+		v: []interface{}{"two", Record{RecordSchema: subrecordSchema, Values: []interface{}{false, 11}}},
 		b: []byte{6, 't', 'w', 'o', 0, 22},
 	},
 }
@@ -186,8 +198,9 @@ func TestRecordEncode(t *testing.T) {
 	for _, data := range recordData {
 		var w bytes.Buffer
 		codec := RecordSchema{Name: "rec", Fields: data.c}
-		codec.Encode(&w, data.v)
-		assert.Equal(t, data.b, w.Bytes())
+		rec := Record{RecordSchema: codec, Values: data.v}
+		codec.Encode(&w, rec)
+		assert.Equal(t, data.b, w.Bytes(), data.n)
 	}
 }
 
@@ -196,7 +209,8 @@ func TestRecordDecode(t *testing.T) {
 		r := bytes.NewBuffer(data.b)
 		codec := RecordSchema{Name: "rec", Fields: data.c}
 		v := codec.Decode(r)
-		assert.Equal(t, data.v, v.([]interface{}))
+		expected := Record{RecordSchema: codec, Values: data.v}
+		assert.Equal(t, expected, v.(Record), data.n)
 	}
 }
 
