@@ -144,8 +144,8 @@ func TestBooleanDecode(t *testing.T) {
 var subrecordSchema = RecordSchema{
 	Name: "sub",
 	Fields: []RecordField{
-		{Name: "b", FieldSchema: booleanSchema},
-		{Name: "l", FieldSchema: longSchema},
+		{Name: "b", Schema: booleanSchema},
+		{Name: "l", Schema: longSchema},
 	},
 }
 var recordData = []struct {
@@ -189,7 +189,7 @@ var recordData = []struct {
 				},
 			},
 		},
-		v: []interface{}{"two", Record{RecordSchema: subrecordSchema, Values: []interface{}{false, 11}}},
+		v: []interface{}{"two", Record{Schema: subrecordSchema, Values: []interface{}{false, 11}}},
 		b: []byte{6, 't', 'w', 'o', 0, 22},
 	},
 }
@@ -198,7 +198,7 @@ func TestRecordEncode(t *testing.T) {
 	for _, data := range recordData {
 		var w bytes.Buffer
 		codec := RecordSchema{Name: "rec", Fields: data.c}
-		rec := Record{RecordSchema: codec, Values: data.v}
+		rec := Record{Schema: codec, Values: data.v}
 		codec.Encode(&w, rec)
 		assert.Equal(t, data.b, w.Bytes(), data.n)
 	}
@@ -209,7 +209,7 @@ func TestRecordDecode(t *testing.T) {
 		r := bytes.NewBuffer(data.b)
 		codec := RecordSchema{Name: "rec", Fields: data.c}
 		v := codec.Decode(r)
-		expected := Record{RecordSchema: codec, Values: data.v}
+		expected := Record{Schema: codec, Values: data.v}
 		assert.Equal(t, expected, v.(Record), data.n)
 	}
 }

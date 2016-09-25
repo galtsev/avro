@@ -183,25 +183,25 @@ type ArraySchema struct {
 	ItemSchema Schema
 }
 
-func (codec ArraySchema) String() string {
-	return fmt.Sprintf("ArrayCodec<%s>", codec.ItemSchema)
+func (schema ArraySchema) String() string {
+	return fmt.Sprintf("ArrayCodec<%s>", schema.ItemSchema)
 }
 
-func (codec ArraySchema) Encode(w io.Writer, v interface{}) {
+func (schema ArraySchema) Encode(w io.Writer, v interface{}) {
 	arr := v.([]interface{})
 	encodeVarInt(w, len(arr))
 	for _, item := range arr {
-		codec.ItemSchema.Encode(w, item)
+		schema.ItemSchema.Encode(w, item)
 	}
 	_, err := w.Write([]byte{0})
 	check(err)
 }
 
-func (codec ArraySchema) Decode(r Reader) interface{} {
+func (schema ArraySchema) Decode(r Reader) interface{} {
 	arrLen := decodeVarInt(r)
 	buf := make([]interface{}, arrLen)
 	for i := range buf {
-		buf[i] = codec.ItemSchema.Decode(r)
+		buf[i] = schema.ItemSchema.Decode(r)
 	}
 	//TODO: chanked arrays
 	b, err := r.ReadByte()
@@ -221,30 +221,30 @@ type RecordSchema struct {
 	Fields []RecordField
 }
 
-func (codec RecordSchema) Encode(w io.Writer, v interface{}) {
+func (schema RecordSchema) Encode(w io.Writer, v interface{}) {
 	rec := v.(Record)
-	if len(rec.Values) != len(codec.Fields) {
-		panic(errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(rec.Values), len(codec.Fields))))
+	if len(rec.Values) != len(schema.Fields) {
+		panic(errors.New(fmt.Sprintf("Record length mismatch. Provided: %d, expected: %d", len(rec.Values), len(schema.Fields))))
 	}
 	for i, item := range rec.Values {
-		codec.Fields[i].FieldSchema.Encode(w, item)
+		schema.Fields[i].Schema.Encode(w, item)
 	}
 }
 
-func (codec RecordSchema) Decode(r Reader) interface{} {
-	rec := Record{RecordSchema: codec, Values: make([]interface{}, len(codec.Fields))}
-	for i, c := range codec.Fields {
-		rec.Values[i] = c.FieldSchema.Decode(r)
+func (schema RecordSchema) Decode(r Reader) interface{} {
+	rec := Record{Schema: schema, Values: make([]interface{}, len(schema.Fields))}
+	for i, c := range schema.Fields {
+		rec.Values[i] = c.Schema.Decode(r)
 	}
 	return rec
 }
 
-func (codec RecordSchema) String() string {
+func (schema RecordSchema) String() string {
 	var fields []string
-	for _, f := range codec.Fields {
-		fields = append(fields, fmt.Sprintf("%s: %s", f.Name, f.FieldSchema.String()))
+	for _, f := range schema.Fields {
+		fields = append(fields, fmt.Sprintf("%s: %s", f.Name, f.Schema.String()))
 	}
-	return fmt.Sprintf("%s<%s>", codec.Name, strings.Join(fields, ","))
+	return fmt.Sprintf("%s<%s>", schema.Name, strings.Join(fields, ","))
 }
 
 func (schema RecordSchema) SchemaName() string {
@@ -269,17 +269,17 @@ func (schema UnionSchema) getOptionForValue(v interface{}) (index int, option Sc
 	return
 }
 
-func (codec UnionSchema) Encode(w io.Writer, v interface{}) {
-	index, option := codec.getOptionForValue(v)
+func (schema UnionSchema) Encode(w io.Writer, v interface{}) {
+	index, option := schema.getOptionForValue(v)
 	encodeVarInt(w, index)
 	option.Encode(w, v)
 }
 
-func (codec UnionSchema) Decode(r Reader) interface{} {
+func (schema UnionSchema) Decode(r Reader) interface{} {
 	var buf [1]byte
 	_, err := r.Read(buf[:])
 	check(err)
-	return codec.Options[buf[0]].Decode(r)
+	return schema.Options[buf[0]].Decode(r)
 }
 
 // inline union have no explicit schema name

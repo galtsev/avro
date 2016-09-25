@@ -10,8 +10,8 @@ var (
 	subRecord = RecordSchema{
 		Name: "subrecord",
 		Fields: []RecordField{
-			{Name: "x", FieldSchema: longSchema},
-			{Name: "y", FieldSchema: longSchema},
+			{Name: "x", Schema: longSchema},
+			{Name: "y", Schema: longSchema},
 		},
 	}
 	parserData = []struct {
@@ -29,8 +29,8 @@ var (
     }`, RecordSchema{
 			Name: "example_3",
 			Fields: []RecordField{
-				{Name: "id", FieldSchema: longSchema},
-				{Name: "name", FieldSchema: stringSchema},
+				{Name: "id", Schema: longSchema},
+				{Name: "name", Schema: stringSchema},
 			},
 		}},
 		{`{
@@ -93,7 +93,7 @@ func TestParser(t *testing.T) {
 		var w bytes.Buffer
 		schema.Encode(&w, data.value)
 		rec := schema.Decode(&w)
-		data.value.RecordSchema = schema
+		data.value.Schema = schema
 		assert.Equal(t, data.value, rec)
 	}
 }

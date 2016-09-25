@@ -52,13 +52,13 @@ type Schema interface {
 }
 
 type RecordField struct {
-	Name        string
-	FieldSchema Schema
+	Name   string
+	Schema Schema
 }
 
 type Record struct {
-	RecordSchema Schema
-	Values       []interface{}
+	Schema Schema
+	Values []interface{}
 }
 
 func encodeVarInt(w io.Writer, v int) {
@@ -87,7 +87,7 @@ func SchemaName(v interface{}) string {
 	case float64:
 		return "double"
 	case Record:
-		return t.RecordSchema.SchemaName()
+		return t.Schema.SchemaName()
 	case []interface{}:
 		return "[]" + SchemaName(t[0])
 	}

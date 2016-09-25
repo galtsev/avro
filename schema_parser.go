@@ -31,7 +31,7 @@ func NewCodec(schema string) Schema {
 
 func buildField(schema interface{}) RecordField {
 	m := schema.(map[string]interface{})
-	return RecordField{Name: m["name"].(string), FieldSchema: buildCodec(m["type"])}
+	return RecordField{Name: m["name"].(string), Schema: buildCodec(m["type"])}
 }
 
 func buildCodec(schema interface{}) Schema {
