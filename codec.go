@@ -216,6 +216,41 @@ func (schema ArraySchema) SchemaName() string {
 	return "[]" + schema.ItemSchema.SchemaName()
 }
 
+type MapSchema struct {
+	ValueSchema Schema
+}
+
+func (schema MapSchema) Encode(w io.Writer, v interface{}) {
+	m := v.(map[string]interface{})
+	encodeVarInt(w, len(m))
+	for key, val := range m {
+		stringSchema.Encode(w, key)
+		schema.ValueSchema.Encode(w, val)
+	}
+	encodeVarInt(w, 0)
+}
+
+func (schema MapSchema) Decode(r Reader) interface{} {
+	mapLen := decodeVarInt(r)
+	res := make(map[string]interface{})
+	for i := 0; i < mapLen; i++ {
+		key := stringSchema.Decode(r).(string)
+		value := schema.ValueSchema.Decode(r)
+		res[key] = value
+	}
+	_ = decodeVarInt(r)
+	return res
+}
+
+func (schema MapSchema) String() string {
+	return fmt.Sprintf("MapSchema<%s>", schema.ValueSchema.SchemaName())
+}
+
+// TODO:
+func (schema MapSchema) SchemaName() string {
+	return "map"
+}
+
 type RecordSchema struct {
 	Name   string
 	Fields []RecordField

@@ -223,3 +223,38 @@ func TestDoubleEncodeDecode(t *testing.T) {
 		assert.Equal(t, f, v.(float64))
 	}
 }
+
+var (
+	mapData = []struct {
+		n string
+		c Schema
+		v map[string]interface{}
+		b []byte
+	}{
+		{
+			n: "long",
+			c: MapSchema{ValueSchema: longSchema},
+			v: map[string]interface{}{
+				"one": 1,
+				"two": 2,
+			},
+			b: []byte{4, 6, 'o', 'n', 'e', 2, 6, 't', 'w', 'o', 4, 0},
+		},
+	}
+)
+
+func TestMapEncode(t *testing.T) {
+	for _, data := range mapData {
+		var w bytes.Buffer
+		data.c.Encode(&w, data.v)
+		assert.Equal(t, data.b, w.Bytes(), data.n)
+	}
+}
+
+func TestMapDecode(t *testing.T) {
+	for _, data := range mapData {
+		r := bytes.NewBuffer(data.b)
+		v := data.c.Decode(r)
+		assert.Equal(t, data.v, v, data.n)
+	}
+}
