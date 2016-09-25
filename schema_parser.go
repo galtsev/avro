@@ -1,58 +1,57 @@
-package main
+package avro
 
 import (
-    "encoding/json"
+	"encoding/json"
 )
 
-func baseCodec(name string) Codec {
-    switch name {
-    case "long":
-        return longCodec
-    case "bytes":
-        return bytesCodec
-    case "string":
-        return stringCodec
-    case "double":
-        return doubleCodec
-    default:
-        panic("unknown codec")
-    }
+func baseCodec(name string) Schema {
+	switch name {
+	case "long":
+		return longSchema
+	case "bytes":
+		return bytesSchema
+	case "string":
+		return stringSchema
+	case "double":
+		return doubleSchema
+	default:
+		panic("unknown codec")
+	}
 }
 
-func NewCodec(schema string) Codec {
-    var parsedSchema interface{}
-    check(json.Unmarshal([]byte(schema), &parsedSchema))
-    return buildCodec(parsedSchema)
+func NewCodec(schema string) Schema {
+	var parsedSchema interface{}
+	check(json.Unmarshal([]byte(schema), &parsedSchema))
+	return buildCodec(parsedSchema)
 }
 
 func buildField(schema interface{}) RecordField {
-    m := schema.(map[string]interface{})
-    return RecordField{Name: m["name"].(string), FieldCodec: buildCodec(m["type"])}
+	m := schema.(map[string]interface{})
+	return RecordField{Name: m["name"].(string), FieldSchema: buildCodec(m["type"])}
 }
 
-func buildCodec(schema interface{}) Codec {
-    switch v := schema.(type) {
-    case string:
-        return baseCodec(v)
-    case []interface{}:
-        var res UnionCodec
-        for _, t := range(v) {
-            res.Options = append(res.Options, buildCodec(t))
-        }
-        return res
-    case map[string]interface{}:
-        switch v["type"].(string) {
-        case "array":
-            return ArrayCodec{ItemCodec: buildCodec(v["items"])}
-        case "record":
-            var res RecordCodec
-            res.Name = v["name"].(string)
-            for _, f := range(v["fields"].([]interface{})) {
-                res.Fields = append(res.Fields, buildField(f))
-            }
-            return res
-        }
-    }
-    return nil
+func buildCodec(schema interface{}) Schema {
+	switch v := schema.(type) {
+	case string:
+		return baseCodec(v)
+	case []interface{}:
+		var res UnionSchema
+		for _, t := range v {
+			res.Options = append(res.Options, buildCodec(t))
+		}
+		return res
+	case map[string]interface{}:
+		switch v["type"].(string) {
+		case "array":
+			return ArraySchema{ItemSchema: buildCodec(v["items"])}
+		case "record":
+			var res RecordSchema
+			res.Name = v["name"].(string)
+			for _, f := range v["fields"].([]interface{}) {
+				res.Fields = append(res.Fields, buildField(f))
+			}
+			return res
+		}
+	}
+	return nil
 }
-

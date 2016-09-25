@@ -1,14 +1,14 @@
-package main
-    
+package avro
+
 import (
-    "testing"
-    _ "github.com/stretchr/testify/assert"
+	_ "github.com/stretchr/testify/assert"
+	"testing"
 )
 
 var (
-    //example_1 = "long"
-    example_2 = `{"type": "array", "items": "string"}`
-    example_3 = `{
+	//example_1 = "long"
+	example_2 = `{"type": "array", "items": "string"}`
+	example_3 = `{
         "name": "example_3",
         "type": "record",
         "fields": [
@@ -16,7 +16,7 @@ var (
             {"name": "name", "type": "string"}
         ]
     }`
-    example_4 = `{
+	example_4 = `{
         "name": "example_4",
         "type": "record",
         "fields": [
@@ -38,7 +38,7 @@ var (
 )
 
 func TestNewCodec(t *testing.T) {
-    for _, example := range([]string{example_2, example_3, example_4}) {
-        _ = NewCodec(example)
-    }
+	for _, example := range []string{example_2, example_3, example_4} {
+		_ = NewCodec(example)
+	}
 }
