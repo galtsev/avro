@@ -238,5 +238,5 @@ func (codec UnionCodec) Decode(r Reader) interface{} {
     var buf [1]byte
     _, err := r.Read(buf[:])
     check(err)
-    return buf[0]
+    return codec.Options[buf[0]].Decode(r)
 }
