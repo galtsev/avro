@@ -1,8 +1,10 @@
-package avro
+package binary
 
 import (
 	"bytes"
+	. "github.com/galtsev/avro"
 	"github.com/stretchr/testify/assert"
+
 	"strconv"
 	"testing"
 )
@@ -242,14 +244,6 @@ var (
 		},
 	}
 )
-
-func TestMapEncode(t *testing.T) {
-	for _, data := range mapData {
-		var w bytes.Buffer
-		data.c.Encode(&w, data.v)
-		assert.Equal(t, data.b, w.Bytes(), data.n)
-	}
-}
 
 func TestMapDecode(t *testing.T) {
 	for _, data := range mapData {

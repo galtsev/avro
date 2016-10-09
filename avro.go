@@ -1,34 +1,12 @@
+/*
+Encode and decode to/from Avro serialization format.
+*/
 package avro
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 )
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func zencode(v int) uint64 {
-	//return uint64((v >> 63) ^ (v << 1))
-	if v >= 0 {
-		return uint64(v) << 1
-	} else {
-		return (uint64(-v) << 1) - 1
-	}
-}
-
-func zdecode(v uint64) int {
-	//return int((v >> 1) ^ -(v & 1))
-	if (v & 1) == 0 {
-		return int(v >> 1)
-	} else {
-		return -int((v + 1) >> 1)
-	}
-}
 
 type ValueError struct {
 	Value        interface{}
@@ -51,6 +29,12 @@ type Schema interface {
 	SchemaName() string
 }
 
+type SchemaRepo interface {
+	Append(j string) Schema
+	AppendSchema(name string, schema Schema)
+	Get(name string) Schema
+}
+
 type RecordField struct {
 	Name   string
 	Schema Schema
@@ -59,19 +43,6 @@ type RecordField struct {
 type Record struct {
 	Schema Schema
 	Values []interface{}
-}
-
-func encodeVarInt(w io.Writer, v int) {
-	var buf [10]byte
-	l := binary.PutUvarint(buf[:], uint64(zencode(v)))
-	_, err := w.Write(buf[:l])
-	check(err)
-}
-
-func decodeVarInt(r Reader) int {
-	v, err := binary.ReadUvarint(r)
-	check(err)
-	return zdecode(v)
 }
 
 func SchemaName(v interface{}) string {

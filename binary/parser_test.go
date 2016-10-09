@@ -1,8 +1,10 @@
-package avro
+package binary
 
 import (
 	"bytes"
+	. "github.com/galtsev/avro"
 	"github.com/stretchr/testify/assert"
+
 	"testing"
 )
 
@@ -63,8 +65,10 @@ var (
 )
 
 func TestNewCodec(t *testing.T) {
+	repo := NewRepo()
 	for _, data := range parserData {
-		assert.Equal(t, data.schema, NewCodec(data.j))
+		schema := repo.Append(data.j)
+		assert.Equal(t, data.schema, schema)
 	}
 }
 
@@ -88,8 +92,9 @@ var parserData2 = []struct {
 }
 
 func TestParser(t *testing.T) {
+	repo := NewRepo()
 	for _, data := range parserData2 {
-		schema := NewCodec(data.j)
+		schema := repo.Append(data.j)
 		var w bytes.Buffer
 		schema.Encode(&w, data.value)
 		rec := schema.Decode(&w)

@@ -1,9 +1,10 @@
-package avro
+package binary
 
 import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	. "github.com/galtsev/avro"
 	"io"
 	"math"
 	"strings"
