@@ -252,3 +252,43 @@ func TestMapDecode(t *testing.T) {
 		assert.Equal(t, data.v, v, data.n)
 	}
 }
+
+type testData struct {
+	name   string
+	schema Schema
+	value  interface{}
+}
+
+func testSchema(t *testing.T, schema Schema, data []interface{}, msg string) {
+	for _, value := range data {
+		var w bytes.Buffer
+		schema.Encode(&w, value)
+		decoded := schema.Decode(&w)
+		assert.Equal(t, value, decoded, msg)
+	}
+}
+
+func TestInt(t *testing.T) {
+	data := []int32{0, 1, -1, 32, 63, 64, 255, 256, -64, -65000, 1000000}
+	var vdata []interface{}
+	for _, v := range data {
+		vdata = append(vdata, v)
+	}
+	testSchema(t, intSchema, vdata, "int")
+}
+
+func TestFixed(t *testing.T) {
+	schema := FixedSchema{Name: "fourbytes", Size: 4}
+	data := [][]byte{[]byte("aaaa"), []byte{0, 0, 0, 0}, []byte{0xFF, 0xFF, 0xFF, 0xFF}, []byte("\n\t-.")}
+	var vdata []interface{}
+	for _, v := range data {
+		vdata = append(vdata, v)
+	}
+	testSchema(t, schema, vdata, "fixed4")
+}
+
+func TestUnion(t *testing.T) {
+	schema := UnionSchema{Options: []Schema{nullSchema, intSchema, stringSchema}}
+	data := []interface{}{"abba", nil, int32(1), int32(3), int32(-11), "hello", "\n", int32(667)}
+	testSchema(t, schema, data, "Union<null,int,string>")
+}

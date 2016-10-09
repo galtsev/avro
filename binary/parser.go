@@ -11,6 +11,7 @@ type BinarySchemaRepo struct {
 
 func NewRepo() SchemaRepo {
 	repo := BinarySchemaRepo{schemas: make(map[string]Schema)}
+	repo.AppendSchema("null", nullSchema)
 	repo.AppendSchema("boolean", booleanSchema)
 	repo.AppendSchema("int", intSchema)
 	repo.AppendSchema("long", longSchema)
@@ -37,6 +38,8 @@ func (r *BinarySchemaRepo) buildCodec(schema interface{}) Schema {
 		return res
 	case map[string]interface{}:
 		switch v["type"].(string) {
+		case "fixed":
+			return FixedSchema{Name: v["name"].(string), Size: v["size"].(int)}
 		case "array":
 			return ArraySchema{ItemSchema: r.buildCodec(v["items"])}
 		case "record":

@@ -180,6 +180,35 @@ func (DoubleSchema) SchemaName() string {
 	return "double"
 }
 
+type FixedSchema struct {
+	Name string
+	Size int
+}
+
+func (schema FixedSchema) String() string {
+	return fmt.Sprintf("Fixed<%s:%d>", schema.Name, schema.Size)
+}
+
+func (schema FixedSchema) Encode(w io.Writer, v interface{}) {
+	buf := v.([]byte)
+	if len(buf) != schema.Size {
+		panic(ValueError{Value: v, ExpectedType: fmt.Sprintf("[]bytes of length %d", schema.Size)})
+	}
+	_, err := w.Write(buf)
+	check(err)
+}
+
+func (schema FixedSchema) Decode(r Reader) interface{} {
+	buf := make([]byte, schema.Size)
+	_, err := r.Read(buf)
+	check(err)
+	return buf
+}
+
+func (schema FixedSchema) SchemaName() string {
+	return schema.Name
+}
+
 type ArraySchema struct {
 	ItemSchema Schema
 }
@@ -302,7 +331,7 @@ func (schema UnionSchema) getOptionForValue(v interface{}) (index int, option Sc
 			return
 		}
 	}
-	return
+	panic(ValueError{Value: v, ExpectedType: schema.String()})
 }
 
 func (schema UnionSchema) Encode(w io.Writer, v interface{}) {
@@ -312,10 +341,8 @@ func (schema UnionSchema) Encode(w io.Writer, v interface{}) {
 }
 
 func (schema UnionSchema) Decode(r Reader) interface{} {
-	var buf [1]byte
-	_, err := r.Read(buf[:])
-	check(err)
-	return schema.Options[buf[0]].Decode(r)
+	ind := decodeVarInt(r)
+	return schema.Options[ind].Decode(r)
 }
 
 // inline union have no explicit schema name

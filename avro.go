@@ -47,6 +47,10 @@ type Record struct {
 
 func SchemaName(v interface{}) string {
 	switch t := v.(type) {
+	case nil:
+		return "null"
+	case bool:
+		return "boolean"
 	case int32:
 		return "int"
 	case int:
