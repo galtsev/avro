@@ -45,6 +45,22 @@ type Record struct {
 	Values []interface{}
 }
 
+func Encode(w io.Writer, schema Schema, v interface{}) (err error) {
+	defer func() {
+		err = recover().(error)
+	}()
+	schema.Encode(w, v)
+	return
+}
+
+func Decode(r Reader, schema Schema) (v interface{}, err error) {
+	defer func() {
+		err = recover().(error)
+	}()
+	v = schema.Decode(r)
+	return
+}
+
 func SchemaName(v interface{}) string {
 	switch t := v.(type) {
 	case nil:

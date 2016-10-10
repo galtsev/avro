@@ -11,13 +11,13 @@ type BinarySchemaRepo struct {
 
 func NewRepo() SchemaRepo {
 	repo := BinarySchemaRepo{schemas: make(map[string]Schema)}
-	repo.AppendSchema("null", nullSchema)
-	repo.AppendSchema("boolean", booleanSchema)
-	repo.AppendSchema("int", intSchema)
-	repo.AppendSchema("long", longSchema)
-	repo.AppendSchema("bytes", bytesSchema)
-	repo.AppendSchema("string", stringSchema)
-	repo.AppendSchema("double", doubleSchema)
+	repo.AppendSchema("null", Null)
+	repo.AppendSchema("boolean", Boolean)
+	repo.AppendSchema("int", Integer)
+	repo.AppendSchema("long", Long)
+	repo.AppendSchema("bytes", Bytes)
+	repo.AppendSchema("string", String)
+	repo.AppendSchema("double", Double)
 	return &repo
 }
 

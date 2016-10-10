@@ -12,15 +12,15 @@ var (
 	subRecord = RecordSchema{
 		Name: "subrecord",
 		Fields: []RecordField{
-			{Name: "x", Schema: longSchema},
-			{Name: "y", Schema: longSchema},
+			{Name: "x", Schema: Long},
+			{Name: "y", Schema: Long},
 		},
 	}
 	parserData = []struct {
 		j      string
 		schema Schema
 	}{
-		{`{"type": "array", "items": "string"}`, ArraySchema{ItemSchema: stringSchema}},
+		{`{"type": "array", "items": "string"}`, ArraySchema{ItemSchema: String}},
 		{`{
         "name": "example_3",
         "type": "record",
@@ -31,8 +31,8 @@ var (
     }`, RecordSchema{
 			Name: "example_3",
 			Fields: []RecordField{
-				{Name: "id", Schema: longSchema},
-				{Name: "name", Schema: stringSchema},
+				{Name: "id", Schema: Long},
+				{Name: "name", Schema: String},
 			},
 		}},
 		{`{
@@ -56,8 +56,8 @@ var (
     }`, RecordSchema{
 			Name: "example_4",
 			Fields: []RecordField{
-				{"id", longSchema},
-				{"flags", ArraySchema{ItemSchema: stringSchema}},
+				{"id", Long},
+				{"flags", ArraySchema{ItemSchema: String}},
 				{"pos", subRecord},
 			},
 		}},

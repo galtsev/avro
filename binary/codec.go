@@ -12,7 +12,7 @@ import (
 
 type NullSchema struct{}
 
-var nullSchema NullSchema
+var Null NullSchema
 
 func (NullSchema) Encode(w io.Writer, v interface{}) {
 	return
@@ -32,14 +32,14 @@ func (NullSchema) SchemaName() string {
 
 type IntSchema struct{}
 
-var intSchema IntSchema
+var Integer IntSchema
 
 func (IntSchema) Encode(w io.Writer, v interface{}) {
-	encodeVarInt(w, int(v.(int32)))
+	EncodeVarInt(w, int(v.(int32)))
 }
 
 func (IntSchema) Decode(r Reader) interface{} {
-	return int32(decodeVarInt(r))
+	return int32(DecodeVarInt(r))
 }
 
 func (IntSchema) String() string {
@@ -52,14 +52,14 @@ func (IntSchema) SchemaName() string {
 
 type LongSchema struct{}
 
-var longSchema LongSchema
+var Long LongSchema
 
 func (LongSchema) Encode(w io.Writer, v interface{}) {
-	encodeVarInt(w, v.(int))
+	EncodeVarInt(w, v.(int))
 }
 
 func (LongSchema) Decode(r Reader) interface{} {
-	return decodeVarInt(r)
+	return DecodeVarInt(r)
 }
 
 func (LongSchema) String() string {
@@ -73,20 +73,20 @@ func (LongSchema) SchemaName() string {
 type BytesSchema struct{}
 
 func encodeBytes(w io.Writer, buf []byte) {
-	encodeVarInt(w, len(buf))
+	EncodeVarInt(w, len(buf))
 	_, err := w.Write(buf)
 	check(err)
 }
 
 func decodeBytes(r Reader) []byte {
-	bufLen := decodeVarInt(r)
+	bufLen := DecodeVarInt(r)
 	buf := make([]byte, bufLen, bufLen)
 	_, err := r.Read(buf)
 	check(err)
 	return buf
 }
 
-var bytesSchema BytesSchema
+var Bytes BytesSchema
 
 func (BytesSchema) Encode(w io.Writer, v interface{}) {
 	encodeBytes(w, v.([]byte))
@@ -106,7 +106,7 @@ func (BytesSchema) SchemaName() string {
 
 type StringSchema struct{}
 
-var stringSchema StringSchema
+var String StringSchema
 
 func (StringSchema) Encode(w io.Writer, v interface{}) {
 	encodeBytes(w, []byte(v.(string)))
@@ -126,7 +126,7 @@ func (StringSchema) SchemaName() string {
 
 type BooleanSchema struct{}
 
-var booleanSchema BooleanSchema
+var Boolean BooleanSchema
 
 func (BooleanSchema) String() string {
 	return "BooleanCodec"
@@ -155,7 +155,7 @@ func (BooleanSchema) SchemaName() string {
 
 type DoubleSchema struct{}
 
-var doubleSchema DoubleSchema
+var Double DoubleSchema
 
 func (DoubleSchema) String() string {
 	return "DoubleCodec"
@@ -219,7 +219,7 @@ func (schema ArraySchema) String() string {
 
 func (schema ArraySchema) Encode(w io.Writer, v interface{}) {
 	arr := v.([]interface{})
-	encodeVarInt(w, len(arr))
+	EncodeVarInt(w, len(arr))
 	for _, item := range arr {
 		schema.ItemSchema.Encode(w, item)
 	}
@@ -228,7 +228,7 @@ func (schema ArraySchema) Encode(w io.Writer, v interface{}) {
 }
 
 func (schema ArraySchema) Decode(r Reader) interface{} {
-	arrLen := decodeVarInt(r)
+	arrLen := DecodeVarInt(r)
 	buf := make([]interface{}, arrLen)
 	for i := range buf {
 		buf[i] = schema.ItemSchema.Decode(r)
@@ -252,23 +252,23 @@ type MapSchema struct {
 
 func (schema MapSchema) Encode(w io.Writer, v interface{}) {
 	m := v.(map[string]interface{})
-	encodeVarInt(w, len(m))
+	EncodeVarInt(w, len(m))
 	for key, val := range m {
-		stringSchema.Encode(w, key)
+		String.Encode(w, key)
 		schema.ValueSchema.Encode(w, val)
 	}
-	encodeVarInt(w, 0)
+	EncodeVarInt(w, 0)
 }
 
 func (schema MapSchema) Decode(r Reader) interface{} {
-	mapLen := decodeVarInt(r)
+	mapLen := DecodeVarInt(r)
 	res := make(map[string]interface{})
 	for i := 0; i < mapLen; i++ {
-		key := stringSchema.Decode(r).(string)
+		key := String.Decode(r).(string)
 		value := schema.ValueSchema.Decode(r)
 		res[key] = value
 	}
-	_ = decodeVarInt(r)
+	_ = DecodeVarInt(r)
 	return res
 }
 
@@ -336,12 +336,12 @@ func (schema UnionSchema) getOptionForValue(v interface{}) (index int, option Sc
 
 func (schema UnionSchema) Encode(w io.Writer, v interface{}) {
 	index, option := schema.getOptionForValue(v)
-	encodeVarInt(w, index)
+	EncodeVarInt(w, index)
 	option.Encode(w, v)
 }
 
 func (schema UnionSchema) Decode(r Reader) interface{} {
-	ind := decodeVarInt(r)
+	ind := DecodeVarInt(r)
 	return schema.Options[ind].Decode(r)
 }
 

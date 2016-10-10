@@ -31,14 +31,14 @@ func zdecode(v uint64) int {
 	}
 }
 
-func encodeVarInt(w io.Writer, v int) {
+func EncodeVarInt(w io.Writer, v int) {
 	var buf [10]byte
 	l := benc.PutUvarint(buf[:], uint64(zencode(v)))
 	_, err := w.Write(buf[:l])
 	check(err)
 }
 
-func decodeVarInt(r Reader) int {
+func DecodeVarInt(r Reader) int {
 	v, err := benc.ReadUvarint(r)
 	check(err)
 	return zdecode(v)

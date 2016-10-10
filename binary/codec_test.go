@@ -44,7 +44,7 @@ var (
 func TestLongCodecEncode(t *testing.T) {
 	for _, data := range longData {
 		var w bytes.Buffer
-		longSchema.Encode(&w, data.i)
+		Long.Encode(&w, data.i)
 		assert.Equal(t, data.b, w.Bytes())
 	}
 }
@@ -52,7 +52,7 @@ func TestLongCodecEncode(t *testing.T) {
 func TestLongCodecDecode(t *testing.T) {
 	for _, data := range longData {
 		buf := bytes.NewBuffer(data.b)
-		v := longSchema.Decode(buf)
+		v := Long.Decode(buf)
 		assert.Equal(t, data.i, v.(int))
 	}
 }
@@ -64,7 +64,7 @@ func zlen(s string) []byte {
 func TestStringCodecEncode(t *testing.T) {
 	for _, s := range stringArgs {
 		var w bytes.Buffer
-		stringSchema.Encode(&w, s)
+		String.Encode(&w, s)
 		expected := append(zlen(s), []byte(s)...)
 		assert.Equal(t, expected, w.Bytes())
 	}
@@ -74,13 +74,13 @@ func TestStringCodecDecode(t *testing.T) {
 	for _, s := range stringArgs {
 		encoded := append(zlen(s), []byte(s)...)
 		r := bytes.NewBuffer(encoded)
-		v := stringSchema.Decode(r)
+		v := String.Decode(r)
 		assert.Equal(t, s, v.(string))
 	}
 }
 
 func TestArrayEncode(t *testing.T) {
-	codec := ArraySchema{ItemSchema: longSchema}
+	codec := ArraySchema{ItemSchema: Long}
 	for _, data := range arrayData {
 		var w bytes.Buffer
 		codec.Encode(&w, data.a)
@@ -89,7 +89,7 @@ func TestArrayEncode(t *testing.T) {
 }
 
 func TestArrayDecode(t *testing.T) {
-	codec := ArraySchema{ItemSchema: longSchema}
+	codec := ArraySchema{ItemSchema: Long}
 	for _, data := range arrayData {
 		r := bytes.NewBuffer(data.b)
 		v := codec.Decode(r)
@@ -114,7 +114,7 @@ var intData = []struct {
 func TestIntEncode(t *testing.T) {
 	for _, data := range intData {
 		var w bytes.Buffer
-		intSchema.Encode(&w, data.v)
+		Integer.Encode(&w, data.v)
 		assert.Equal(t, data.b, w.Bytes(), strconv.Itoa(int(data.v)))
 	}
 }
@@ -130,7 +130,7 @@ var boolData = []struct {
 func TestBooleanEncode(t *testing.T) {
 	for _, data := range boolData {
 		var w bytes.Buffer
-		booleanSchema.Encode(&w, data.v)
+		Boolean.Encode(&w, data.v)
 		assert.Equal(t, data.b, w.Bytes())
 	}
 }
@@ -138,7 +138,7 @@ func TestBooleanEncode(t *testing.T) {
 func TestBooleanDecode(t *testing.T) {
 	for _, data := range boolData {
 		r := bytes.NewBuffer(data.b)
-		v := booleanSchema.Decode(r)
+		v := Boolean.Decode(r)
 		assert.Equal(t, data.v, v.(bool))
 	}
 }
@@ -146,8 +146,8 @@ func TestBooleanDecode(t *testing.T) {
 var subrecordSchema = RecordSchema{
 	Name: "sub",
 	Fields: []RecordField{
-		{Name: "b", Schema: booleanSchema},
-		{Name: "l", Schema: longSchema},
+		{Name: "b", Schema: Boolean},
+		{Name: "l", Schema: Long},
 	},
 }
 var recordData = []struct {
@@ -158,20 +158,20 @@ var recordData = []struct {
 }{
 	{
 		n: "long,long",
-		c: []RecordField{RecordField{"a", longSchema}, RecordField{"b", longSchema}},
+		c: []RecordField{RecordField{"a", Long}, RecordField{"b", Long}},
 		v: []interface{}{1, -5},
 		b: []byte{2, 9},
 	},
 	{
 		n: "string,long",
-		c: []RecordField{RecordField{"a", stringSchema}, RecordField{"b", longSchema}},
+		c: []RecordField{RecordField{"a", String}, RecordField{"b", Long}},
 		v: []interface{}{"one", 7},
 		b: []byte{6, 'o', 'n', 'e', 14},
 	},
 	// array in record
 	{
 		n: "long,[]bool",
-		c: []RecordField{RecordField{"id", longSchema}, RecordField{"flags", ArraySchema{booleanSchema}}},
+		c: []RecordField{RecordField{"id", Long}, RecordField{"flags", ArraySchema{Boolean}}},
 		v: []interface{}{3, []interface{}{true, false, true}},
 		b: []byte{6, 6, 1, 0, 1, 0},
 	},
@@ -179,14 +179,14 @@ var recordData = []struct {
 	{
 		n: "name,rec<bool,long>",
 		c: []RecordField{
-			RecordField{"name", stringSchema},
+			RecordField{"name", String},
 			RecordField{
 				"rec",
 				RecordSchema{
 					Name: "sub",
 					Fields: []RecordField{
-						RecordField{"b", booleanSchema},
-						RecordField{"l", longSchema},
+						RecordField{"b", Boolean},
+						RecordField{"l", Long},
 					},
 				},
 			},
@@ -219,9 +219,9 @@ func TestRecordDecode(t *testing.T) {
 func TestDoubleEncodeDecode(t *testing.T) {
 	for _, f := range []float64{0, 1.1, 1.0 / 3.0, 123e4} {
 		var w bytes.Buffer
-		doubleSchema.Encode(&w, f)
+		Double.Encode(&w, f)
 		r := bytes.NewBuffer(w.Bytes())
-		v := doubleSchema.Decode(r)
+		v := Double.Decode(r)
 		assert.Equal(t, f, v.(float64))
 	}
 }
@@ -235,7 +235,7 @@ var (
 	}{
 		{
 			n: "long",
-			c: MapSchema{ValueSchema: longSchema},
+			c: MapSchema{ValueSchema: Long},
 			v: map[string]interface{}{
 				"one": 1,
 				"two": 2,
@@ -274,7 +274,7 @@ func TestInt(t *testing.T) {
 	for _, v := range data {
 		vdata = append(vdata, v)
 	}
-	testSchema(t, intSchema, vdata, "int")
+	testSchema(t, Integer, vdata, "int")
 }
 
 func TestFixed(t *testing.T) {
@@ -288,7 +288,7 @@ func TestFixed(t *testing.T) {
 }
 
 func TestUnion(t *testing.T) {
-	schema := UnionSchema{Options: []Schema{nullSchema, intSchema, stringSchema}}
+	schema := UnionSchema{Options: []Schema{Null, Integer, String}}
 	data := []interface{}{"abba", nil, int32(1), int32(3), int32(-11), "hello", "\n", int32(667)}
 	testSchema(t, schema, data, "Union<null,int,string>")
 }
