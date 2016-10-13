@@ -12,6 +12,7 @@ type Reader struct {
 	buf          bytes.Buffer
 	schema       avro.Schema
 	recsInBuffer int
+	Value        interface{}
 }
 
 func NewReader(r avro.Reader) *Reader {
@@ -45,7 +46,7 @@ func (r *Reader) NextBatch() (ok bool) {
 	}()
 	r.recsInBuffer = binary.DecodeVarInt(r.reader)
 	blockLen := binary.DecodeVarInt(r.reader)
-	buf := make([]byte, 0, blockLen)
+	buf := make([]byte, blockLen)
 	_, err := io.ReadFull(r.reader, buf)
 	check(err)
 	var sync [16]byte
@@ -55,11 +56,11 @@ func (r *Reader) NextBatch() (ok bool) {
 	return true
 }
 
-func (r *Reader) Next() (v interface{}, ok bool) {
+func (r *Reader) Next() bool {
 	if r.recsInBuffer == 0 {
-		return nil, false
+		return false
 	}
-	v = r.schema.Decode(&r.buf)
+	r.Value = r.schema.Decode(&r.buf)
 	r.recsInBuffer -= 1
-	return v, true
+	return true
 }
