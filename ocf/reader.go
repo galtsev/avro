@@ -8,7 +8,16 @@ import (
 )
 
 type Reader struct {
-	reader       avro.Reader
+	reader avro.Reader
+	schema avro.Schema
+	batch  *Batch
+}
+
+func (b *Reader) Batch() *Batch {
+	return b.batch
+}
+
+type Batch struct {
 	buf          bytes.Buffer
 	schema       avro.Schema
 	recsInBuffer int
@@ -44,7 +53,9 @@ func (r *Reader) NextBatch() (ok bool) {
 		}
 		panic(err)
 	}()
-	r.recsInBuffer = binary.DecodeVarInt(r.reader)
+	batch := Batch{schema: r.schema}
+	r.batch = &batch
+	batch.recsInBuffer = binary.DecodeVarInt(r.reader)
 	blockLen := binary.DecodeVarInt(r.reader)
 	buf := make([]byte, blockLen)
 	_, err := io.ReadFull(r.reader, buf)
@@ -52,15 +63,15 @@ func (r *Reader) NextBatch() (ok bool) {
 	var sync [16]byte
 	_, err = io.ReadFull(r.reader, sync[:])
 	check(err)
-	r.buf = *bytes.NewBuffer(buf)
+	batch.buf = *bytes.NewBuffer(buf)
 	return true
 }
 
-func (r *Reader) Next() bool {
-	if r.recsInBuffer == 0 {
+func (b *Batch) Next() bool {
+	if b.recsInBuffer == 0 {
 		return false
 	}
-	r.Value = r.schema.Decode(&r.buf)
-	r.recsInBuffer -= 1
+	b.Value = b.schema.Decode(&b.buf)
+	b.recsInBuffer -= 1
 	return true
 }
